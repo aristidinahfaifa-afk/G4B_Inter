@@ -99,10 +99,10 @@ def beau_tableau(
             gt = gt.fmt_number(
                 columns=col, 
                 decimals=2, 
-                scale_by=0.01, 
+                scale_by=1, 
                 pattern="{x}%",
                 sep_mark=" ", 
-                dec_mark=","
+                dec_mark="."
             )
 
     # ENTIERS
