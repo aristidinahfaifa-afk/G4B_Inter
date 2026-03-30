@@ -4,10 +4,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 
-# ─── CONFIG ───────────────────────────────────────────────────────────────────
+# ─── CONFIGURATION ───────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Élections Présidentielles 2022",
-    page_icon="🗳️",
+    page_icon="O",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -104,6 +104,10 @@ def load_raw():
     df["code_commune"] = (
         df["code_departement"].str[:2]
         + df["code_commune"].str[-3:].str.zfill(3)
+    )
+    mask_wallis = df['code_departement'].astype(str) == '986'
+    df.loc[mask_wallis, 'code_commune'] = (
+        '986' + df.loc[mask_wallis, 'code_commune'].str[-1:].str.zfill(2)
     )
     df["candidat"] = (df["prenom"].fillna("") + " " + df["nom"].fillna("")).str.strip()
     return df
