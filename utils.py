@@ -33,7 +33,7 @@ def beau_tableau(
         - `"all"` → TOUTES les colonnes en gras
         - `None` → pas de gras
     titre/sous_titre/date : str, optional
-        Header complet si TOUS les 3 fournis (avec icône 📅).
+        Header complet si TOUS les 3 fournis (avec icône calendrier comme dans l'exmple du rendu).
     note : str, optional
         Note en bas (en gras).
     police : str
@@ -65,9 +65,9 @@ def beau_tableau(
     col_entiers = col_entiers or []
     col_pourcentages = col_pourcentages or []
     
-    # GESTION GRAS INTELLIGENTE
+    # GESTION GRAS 
     if col_gras == "all":
-        col_gras = list(df.columns)  # ← TOUTES les colonnes
+        col_gras = list(df.columns)  #  TOUTES les colonnes
     else:
         col_gras = col_gras or []
 
