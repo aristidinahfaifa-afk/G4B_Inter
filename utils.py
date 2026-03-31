@@ -89,7 +89,14 @@ def beau_tableau(
                 f' <em>{date}</em>)'
             )
         )
-
+    if titre and sous_titre and date==None:
+        gt = gt.tab_header(
+            title=md(f"**{titre}**"),
+            subtitle=md(
+                f'{sous_titre} '
+                
+            )
+        )
     if note:
         gt = gt.tab_source_note(md(f"**{note}**"))
 
@@ -358,3 +365,99 @@ def cartes_plusieurs_candidats(df, df_geo, liste_candidats, indicateur="Score (%
             epais_lim=epais_lim,
             long_legend=long_legend
         )
+
+
+
+def diagnostic_qualite(df, colonnes_cle=None):
+
+    # =========================
+    # 1. Valeurs manquantes
+    # =========================
+    manquant = df.isna().sum()
+    manquant_pct = (manquant / len(df) * 100).round(2)
+
+    table_manquant = (
+        pd.DataFrame({
+            "Variable": manquant.index,
+            "Nombre de valeurs manquantes": manquant.values,
+            "Part (%)": manquant_pct.values
+        })
+        .query("`Nombre de valeurs manquantes` > 0")
+        .sort_values("Part (%)", ascending=False)
+    )
+
+    if len(table_manquant) > 0:
+        display(beau_tableau(
+            table_manquant,
+            col_entiers=["Nombre de valeurs manquantes"],
+            col_pourcentages=["Part (%)"],
+            titre="Variables avec les valeurs manquantes",
+            sous_titre="Qualité des données"
+        ))
+
+    # =========================
+    # 2. Doublons
+    # =========================
+    n_doublons = df.duplicated().sum()
+
+    n_doublons_key = (
+        df.duplicated(subset=colonnes_cle).sum()
+        if colonnes_cle else 0
+    )
+
+    doublons = pd.DataFrame({
+        "Type de doublon": ["Doublons exacts"],
+        "Nombre": [n_doublons]
+    })
+
+    display(beau_tableau(
+        doublons,
+        col_entiers=["Nombre"],
+        col_gras="all",
+        titre="Doublons",
+        sous_titre="Vérification"
+    ))
+
+    # =========================
+    # 3. Variable voix
+    # =========================
+    stats_voix = df["voix"].describe().to_frame().reset_index()
+    stats_voix.columns = ["Indicateur", "Valeur"]
+
+    display(beau_tableau(
+        stats_voix,
+        col_entiers=["Valeur"],
+        titre="Distribution des votes",
+        sous_titre="Statistiques descriptives"
+    ))
+
+
+    # =========================
+    # 4. Zéro votes global
+    # =========================
+    votes_par_personne = (
+        df.groupby(["nom", "prenom"], dropna=False)["voix"]
+        .sum()
+        .reset_index()
+    )
+
+    zero_votes = votes_par_personne[votes_par_personne["voix"] == 0]
+
+    resume_zero = pd.DataFrame({
+        "Indicateur": ["Candidats sans aucun vote"],
+        "Nombre": [len(zero_votes)]
+    })
+
+    display(beau_tableau(
+        resume_zero,
+        col_entiers=["Nombre"],
+        col_gras="all",
+        titre="Candidats sans aucun vote sur le territoire",
+ 
+    ))
+
+    if len(zero_votes) > 0:
+        display(beau_tableau(
+            zero_votes,
+            titre="Liste des candidats ayant 0 votes sur tout le territoire"
+        ))

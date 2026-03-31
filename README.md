@@ -1,13 +1,9 @@
-#  Évaluation intermédiaire · Cours *Python pour la data science* 
+#  Élections Présidentielles 2022 — Analyse avec Python
 
-Élections Présidentielles 2022 — Analyse avec Python
- Groupe 4B — 2ème année · ENSAI · 2026
-
----
 
 ## Présentation
 
-Ce dépôt contient l'ensemble du travail réalisé dans le cadre de l'évaluation intermédiaire. L'objectif est d'explorer les données électorales fines du premier tour de l'élection présidentielle 2022 à l'aide de Python, en combinant analyse de données, visualisation et cartographie.
+Ce dépôt contient l'ensemble du travail réalisé dans le cadre de l'évaluation intermédiaire du cours *Python pour la data science* en $2^{ème}$ année à l'ENSAI . L'objectif est d'explorer les données électorales du premier tour de l'élection présidentielle 2022 à l'aide de Python, en combinant analyse de données, visualisation et cartographie.
 
 Les données sont issues de [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/r/182268fc-2103-4bcb-a850-6cf90b02a9eb) et contiennent les résultats commune par commune pour chaque candidat.
 
@@ -17,7 +13,7 @@ Les données sont issues de [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/
 
 ```
 .
-├── Partie1et2new.ipynb   # Notebook principal (questions 1 à 8)
+├── Notebook_final.ipynb   # Notebook principal (questions 1 à 8)
 ├── utils.py              # Fonctions réutilisables (tableaux, cartes, filtres)
 ├── app.py                # Application Streamlit interactive
 ├── requirements.txt      # Dépendances Python

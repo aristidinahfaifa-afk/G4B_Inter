@@ -397,7 +397,7 @@ elif page == " Cartographie":
 
     carte.plot(
         column=indicateur,
-        cmap=cmap, vmin=vmin, vmax=vmax,
+        cmap="RdBu_r", vmin=vmin, vmax=vmax,
         legend=True,
         linewidth=0.6, edgecolor=BORDER,
         missing_kwds={"color": "#EEEEEE", "label": "Pas de données"},
