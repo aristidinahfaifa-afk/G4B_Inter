@@ -1,560 +1,460 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+from pathlib import Path
 
-# ── Configuration ─────────────────────────────────────────────────────────────
+# ─── CONFIGURATION ───────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Élections 2022 · G4B",
-    page_icon="🗳️",
+    page_title="Élections Présidentielles 2022",
+    page_icon="O",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ── CSS ───────────────────────────────────────────────────────────────────────
-st.markdown("""
+# ─── PALETTE ENSAI ────────────────────────────────────────────────────────────
+ENSAI_BLUE   = "#003F7F"
+ENSAI_LIGHT  = "#E8F0FB"
+ENSAI_MID    = "#A8C0E0"
+ENSAI_ACCENT = "#0066CC"
+TEXT_DARK    = "#0A1628"
+TEXT_MID     = "#4A5568"
+TEXT_LIGHT   = "#718096"
+WHITE        = "#FFFFFF"
+BORDER       = "#C9D9EE"
+
+# ─── STYLES ───────────────────────────────────────────────────────────────────
+st.markdown(f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
-:root {
-    --noir:   #0d0d0d;
-    --or:     #c9a84c;
-    --or2:    #f0d080;
-    --clair:  #faf8f4;
-    --gris:   #4a4a4a;
-    --gris2:  #9a9a9a;
-    --blanc:  #ffffff;
-    --card:   #161616;
-}
+html, body, [data-testid="stApp"] {{
+    background-color: {ENSAI_LIGHT};
+    color: {TEXT_DARK};
+    font-family: 'Inter', sans-serif;
+}}
+[data-testid="stSidebar"] {{
+    background-color: {ENSAI_BLUE} !important;
+}}
+[data-testid="stSidebar"] * {{ color: {WHITE} !important; }}
+[data-testid="stSidebar"] hr {{ border-color: rgba(255,255,255,0.15); }}
 
-html, body, [class*="css"] {
-    font-family: 'DM Sans', sans-serif;
-    background-color: var(--noir);
-    color: #e8e4dc;
-}
-
-[data-testid="stSidebar"] {
-    background: #0a0a0a !important;
-    border-right: 1px solid #2a2a2a;
-}
-[data-testid="stSidebar"] * { color: #e8e4dc !important; }
-[data-testid="stSidebar"] .stRadio label {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.88rem;
-    letter-spacing: 0.03em;
-    padding: 5px 0;
-}
-[data-testid="stSidebar"] hr { border-color: #2a2a2a; }
-
-h1, h2, h3 {
-    font-family: 'Cormorant Garamond', serif;
-    color: var(--or) !important;
-    letter-spacing: 0.02em;
-}
-
-.hero {
-    background: linear-gradient(135deg, #111 0%, #1a1a1a 100%);
-    border: 1px solid #2a2a2a;
-    border-left: 4px solid var(--or);
-    border-radius: 12px;
-    padding: 40px 48px;
-    margin-bottom: 28px;
-    position: relative;
-    overflow: hidden;
-}
-.hero::after {
-    content: "⚜";
-    position: absolute;
-    right: 48px; top: 24px;
-    font-size: 5rem;
-    color: var(--or);
-    opacity: 0.08;
-}
-.hero h1 { font-size: 2.6rem; margin: 0 0 8px 0; line-height: 1.1; }
-.hero p { color: var(--gris2); font-size: 0.95rem; margin: 0; }
-.hero .badge {
-    display: inline-block;
-    background: transparent;
-    border: 1px solid var(--or);
-    color: var(--or);
-    font-size: 0.7rem;
-    padding: 3px 12px;
-    border-radius: 20px;
-    margin-bottom: 16px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-
-.card {
-    background: #111;
-    border: 1px solid #2a2a2a;
-    border-radius: 10px;
-    padding: 24px;
-    margin-bottom: 16px;
-}
-.card-gold { border-left: 3px solid var(--or); }
-
-.metric {
-    background: #111;
-    border: 1px solid #2a2a2a;
-    border-radius: 10px;
-    padding: 20px 24px;
-    text-align: center;
-}
-.metric .val {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 2.2rem;
-    font-weight: 700;
-    color: var(--or);
-    line-height: 1;
-}
-.metric .lbl {
-    font-size: 0.72rem;
-    color: var(--gris2);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-top: 6px;
-}
-
-.divider {
-    height: 1px;
-    background: linear-gradient(90deg, var(--or), transparent);
-    margin: 20px 0;
-    opacity: 0.5;
-}
-
-.q-badge {
-    display: inline-block;
-    background: var(--or);
-    color: #000;
-    font-weight: 700;
-    font-size: 0.72rem;
-    padding: 2px 10px;
-    border-radius: 4px;
-    margin-bottom: 8px;
-    letter-spacing: 0.06em;
-}
-
-.team-card {
-    background: #111;
-    border: 1px solid #2a2a2a;
-    border-radius: 12px;
-    padding: 28px 20px;
-    text-align: center;
-}
-.team-card .nom {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: var(--or);
-    margin: 14px 0 4px 0;
-}
-.team-card .role { font-size: 0.78rem; color: var(--gris2); margin-bottom: 14px; }
-.team-card .links a { color: var(--gris2) !important; margin: 0 6px; font-size: 1rem; text-decoration: none; }
-.avatar-circle {
-    width: 80px; height: 80px;
-    border-radius: 50%;
-    background: #1a1a1a;
-    border: 2px solid var(--or);
-    margin: 0 auto;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.8rem;
-    color: var(--or);
-    overflow: hidden;
-}
-.avatar-circle img { width: 100%; height: 100%; object-fit: cover; }
-
-div[data-testid="stMarkdownContainer"] p { color: #c8c4bc; }
+.page-title {{
+    font-family: 'Source Serif 4', serif;
+    font-size: 2rem; font-weight: 700;
+    color: {ENSAI_BLUE}; margin-bottom: 0.1rem;
+}}
+.page-sub {{
+    font-size: 0.78rem; letter-spacing: 0.12em;
+    text-transform: uppercase; color: {TEXT_LIGHT};
+    margin-bottom: 1.5rem; padding-bottom: 0.8rem;
+    border-bottom: 2px solid {ENSAI_BLUE};
+}}
+.kpi-card {{
+    background: {WHITE}; border: 1px solid {BORDER};
+    border-top: 3px solid {ENSAI_BLUE};
+    border-radius: 6px; padding: 1.2rem 1.4rem; text-align: center;
+}}
+.kpi-label {{ font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: {TEXT_LIGHT}; }}
+.kpi-value {{ font-family: 'Source Serif 4', serif; font-size: 2.2rem; font-weight: 700; color: {ENSAI_BLUE}; line-height: 1; }}
+.kpi-sub {{ font-size: 0.78rem; color: {TEXT_LIGHT}; margin-top: 0.3rem; }}
+.podium-card {{
+    background: {WHITE}; border: 1px solid {BORDER};
+    border-radius: 6px; padding: 1.4rem; text-align: center;
+}}
+.podium-card .medal {{ font-size: 2rem; margin-bottom: 0.5rem; }}
+.podium-card .name {{ font-family: 'Source Serif 4', serif; font-size: 1rem; font-weight: 600; color: {TEXT_DARK}; margin-bottom: 0.6rem; min-height: 2.5rem; }}
+.podium-card .score {{ font-size: 1.9rem; font-weight: 700; color: {ENSAI_BLUE}; font-family: 'Source Serif 4', serif; }}
+.podium-card .voix {{ font-size: 0.8rem; color: {TEXT_LIGHT}; margin-top: 0.3rem; }}
+.section-label {{
+    font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: {TEXT_LIGHT}; margin-top: 1.5rem; margin-bottom: 0.5rem;
+    border-left: 3px solid {ENSAI_ACCENT}; padding-left: 0.6rem;
+}}
+hr.divider {{ border: none; border-top: 1px solid {BORDER}; margin: 1.5rem 0; }}
 </style>
 """, unsafe_allow_html=True)
 
+# ─── COULEURS CANDIDATS ───────────────────────────────────────────────────────
+COULEURS = {
+    "Emmanuel MACRON":       "#FFDD00",
+    "Marine LE PEN":         "#003189",
+    "Jean-Luc MÉLENCHON":   "#CC2529",
+    "Éric ZEMMOUR":          "#1E3A5F",
+    "Valérie PÉCRESSE":      "#0066CC",
+    "Yannick JADOT":         "#2E8B57",
+    "Jean LASSALLE":         "#FF8C00",
+    "Fabien ROUSSEL":        "#B22222",
+    "Nicolas DUPONT-AIGNAN": "#4169E1",
+    "Anne HIDALGO":          "#E91E8C",
+    "Philippe POUTOU":       "#DC143C",
+    "Nathalie ARTHAUD":      "#8B0000",
+}
 
-# ── Données ───────────────────────────────────────────────────────────────────
-@st.cache_data
-def load_data():
-    df = pd.read_csv(
-        'https://www.data.gouv.fr/fr/datasets/r/182268fc-2103-4bcb-a850-6cf90b02a9eb'
+# ─── CHARGEMENT ───────────────────────────────────────────────────────────────
+DATA_URL = "https://www.data.gouv.fr/fr/datasets/r/182268fc-2103-4bcb-a850-6cf90b02a9eb"
+
+@st.cache_data(show_spinner=False)
+def load_raw():
+    df = pd.read_csv(DATA_URL)
+    df = df.convert_dtypes()
+    df["code_commune"]     = df["code_commune"].astype("string")
+    df["code_departement"] = df["code_departement"].astype("string")
+    df["code_departement"] = df["code_departement"].replace("fr_etranger", "99")
+    df["code_commune"] = (
+        df["code_departement"].str[:2]
+        + df["code_commune"].str[-3:].str.zfill(3)
     )
-    df['code_departement'] = df['code_departement'].replace('fr_etranger', '99')
-    df['code_commune'] = (
-        df['code_departement'].astype(str).str[:2]
-        + df['code_commune'].astype(str).str.zfill(3)
+    mask_wallis = df['code_departement'].astype(str) == '986'
+    df.loc[mask_wallis, 'code_commune'] = (
+        '986' + df.loc[mask_wallis, 'code_commune'].str[-1:].str.zfill(2)
     )
-    df['candidat'] = df['prenom'].astype(str) + ' ' + df['nom'].astype(str)
+    df["candidat"] = (df["prenom"].fillna("") + " " + df["nom"].fillna("")).str.strip()
     return df
 
+@st.cache_data(show_spinner=False)
+def compute_national(df):
+    df_exp = df[df["prenom"].notna()]
+    v = df_exp.groupby("candidat")["voix"].sum().reset_index()
+    v.columns = ["Candidat", "votes_national"]
+    v["score_national"] = v["votes_national"] / v["votes_national"].sum() * 100
+    return v.sort_values("votes_national", ascending=False).reset_index(drop=True)
 
-@st.cache_data
-def compute_scores(df):
-    df_exp = df[df['prenom'].notna()]
-    votes_nat = df_exp.groupby('candidat')['voix'].sum().reset_index(name='votes_national')
-    total_nat = votes_nat['votes_national'].sum()
-    votes_nat['score_national'] = votes_nat['votes_national'] / total_nat * 100
+@st.cache_data(show_spinner=False)
+def compute_departements(df, vnat):
+    df_exp = df[df["prenom"].notna()]
+    vd = df_exp.groupby(["code_departement", "candidat"])["voix"].sum().reset_index()
+    vd.columns = ["code_departement", "Candidat", "votes_departement"]
+    tot = vd.groupby("code_departement")["votes_departement"].sum().reset_index()
+    tot.columns = ["code_departement", "total_dep"]
+    vd = vd.merge(tot, on="code_departement")
+    vd["score_departement"] = vd["votes_departement"] / vd["total_dep"] * 100
+    sd = vd.merge(vnat[["Candidat", "votes_national", "score_national"]], on="Candidat", how="left")
+    sd["surrepresentation"] = (sd["score_departement"] - sd["score_national"]) / sd["score_national"] * 100
+    return sd
 
-    votes_dept = df_exp.groupby(['code_departement', 'candidat'])['voix'].sum().reset_index(name='votes_departement')
-    total_dept = votes_dept.groupby('code_departement')['votes_departement'].sum().reset_index(name='total_dept')
-    votes_dept = votes_dept.merge(total_dept, on='code_departement')
-    votes_dept['score_departement'] = votes_dept['votes_departement'] / votes_dept['total_dept'] * 100
+@st.cache_data(show_spinner=False)
+def load_geodata():
+    try:
+        from cartiflette import carti_download
+        return carti_download(
+            values=["France"], crs=4326, borders="DEPARTEMENT",
+            vectorfile_format="geojson", simplification=50,
+            filter_by="FRANCE_ENTIERE_DROM_RAPPROCHES",
+            source="EXPRESS-COG-CARTO-TERRITOIRE", year=2022,
+        )
+    except Exception:
+        return None
 
-    score_dep = votes_dept.merge(votes_nat, on='candidat')
-    score_dep['surrepresentation'] = (
-        (score_dep['score_departement'] - score_dep['score_national'])
-        / score_dep['score_national'] * 100
-    ).round(2)
-    return votes_nat, score_dep
+with st.spinner("Chargement des données…"):
+    df_raw         = load_raw()
+    votes_national = compute_national(df_raw)
+    score_dep      = compute_departements(df_raw, votes_national)
 
+nb_candidats = df_raw[df_raw["prenom"].notna()]["candidat"].nunique()
+total_voix   = int(votes_national["votes_national"].sum())
+nb_communes  = df_raw["code_commune"].nunique()
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
+# ─── HELPERS ──────────────────────────────────────────────────────────────────
+def style_ax(ax, fig):
+    fig.patch.set_facecolor(WHITE)
+    ax.set_facecolor(WHITE)
+    ax.tick_params(colors=TEXT_MID, labelsize=9)
+    for spine in ax.spines.values():
+        spine.set_edgecolor(BORDER)
+    ax.xaxis.grid(True, color=BORDER, linewidth=0.5, linestyle="--")
+    ax.set_axisbelow(True)
+
+def style_colorbar(fig, main_ax):
+    """Style les axes colorbar sans utiliser labelcolor."""
+    for child_ax in fig.axes:
+        if child_ax is not main_ax:
+            child_ax.tick_params(labelsize=8, color=TEXT_MID, labelcolor=TEXT_MID)
+            child_ax.yaxis.label.set_color(TEXT_MID)
+            child_ax.yaxis.label.set_fontsize(9)
+
+# ─── SIDEBAR ──────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("""
-    <div style='padding:12px 0 20px 0;'>
-        <div style='font-family:Cormorant Garamond,serif;font-size:1.4rem;font-weight:700;color:#c9a84c;'>
-            🗳️ Élections 2022
-        </div>
-        <div style='font-size:0.75rem;color:#666;margin-top:4px;'>Analyse territoriale · G4B</div>
-    </div>
-    """, unsafe_allow_html=True)
-    st.markdown("---")
-
-    page = st.radio("", [
-        "🏠  Accueil",
-        "📋  Consignes",
-        "🔍  Présentation des données",
-        "📈  Partie 1 — Explorations",
-        "📊  Partie 2 — Comparaisons",
-        "🗺️  Partie 3 — Cartographie",
-        "👥  Équipe",
-    ], label_visibility="collapsed")
-
-    st.markdown("---")
-    st.markdown("""
-    <div style='font-size:0.7rem;color:#444;line-height:1.8;'>
-        Source : data.gouv.fr<br>
-        Cours : Python data science<br>
-        Deadline : 31 mars 2026
-    </div>
-    """, unsafe_allow_html=True)
-
-
-# ════════════════════════════════════════════════════════════════════════════════
-# ACCUEIL
-# ════════════════════════════════════════════════════════════════════════════════
-if page == "🏠  Accueil":
-    st.markdown("""
-    <div class='hero'>
-        <div class='badge'>Évaluation intermédiaire · 2026</div>
-        <h1>Exploitation de données électorales avec Python</h1>
-        <p>Analyse territoriale des résultats du 1er tour de l'élection présidentielle 2022</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    c1, c2, c3, c4 = st.columns(4)
-    for col, val, lbl in zip([c1,c2,c3,c4],
-        ["12", "10 avril 2022", "~35 000", "101"],
-        ["Candidats", "Date du scrutin", "Communes", "Départements"]):
-        col.markdown(f"<div class='metric'><div class='val'>{val}</div><div class='lbl'>{lbl}</div></div>",
-                     unsafe_allow_html=True)
-
-    st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
-    st.markdown("""
-    <div class='card card-gold'>
-        <b style='color:#c9a84c;font-family:Cormorant Garamond,serif;font-size:1.1rem;'>À propos</b><br><br>
-        Ce projet explore la richesse des données électorales fines à l'échelle communale.
-        L'objectif est de visualiser les dynamiques territoriales de vote et les surreprésentations
-        départementales pour chaque candidat.
-    </div>
-    """, unsafe_allow_html=True)
-
-
-# ════════════════════════════════════════════════════════════════════════════════
-# CONSIGNES
-# ════════════════════════════════════════════════════════════════════════════════
-elif page == "📋  Consignes":
-    st.markdown("# 📋 Consignes générales")
-    st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class='card card-gold'>
-        <b style='color:#c9a84c;'>Livrable</b> : Dépôt Github avec un notebook Jupyter reproductible.<br>
-        <b style='color:#c9a84c;'>Date limite</b> : 31 mars 2026 — envoyer par mail à votre chargé de TD.<br>
-        <b style='color:#c9a84c;'>Critères</b> : lisibilité, reproductibilité (Run All), qualité des outputs.
-    </div>
-    """, unsafe_allow_html=True)
-
-    parties = [
-        ("📈 Partie 1 — Explorations générales", "📈  Partie 1 — Explorations", [
-            ("Q1", "Créer/mettre à jour `code_commune` et `candidat`"),
-            ("Q2", "Compter les candidats (hors votes non exprimés)"),
-            ("Q3", "Scores nationaux — tableau mis en forme"),
-        ]),
-        ("📊 Partie 2 — Comparaisons départementales", "📊  Partie 2 — Comparaisons", [
-            ("Q4", "Scores par département"),
-            ("Q5", "Comparaison score départemental vs national"),
-            ("Q6", "Variable `surrepresentation`"),
-            ("Q7", "Graphique des surreprésentations par candidat"),
-        ]),
-        ("🗺️ Partie 3 — Cartographie", "🗺️  Partie 3 — Cartographie", [
-            ("Q8", "Carte choroplèthe de la surreprésentation par candidat"),
-        ]),
-    ]
-
-    for titre_partie, _, questions in parties:
-        st.markdown(f"### {titre_partie}")
-        for q, desc in questions:
-            st.markdown(f"""
-            <div class='card' style='margin-bottom:8px;padding:14px 20px;'>
-                <span class='q-badge'>{q}</span>
-                <span style='margin-left:10px;color:#c8c4bc;'>{desc}</span>
-            </div>""", unsafe_allow_html=True)
-
-
-# ════════════════════════════════════════════════════════════════════════════════
-# PRÉSENTATION DES DONNÉES
-# ════════════════════════════════════════════════════════════════════════════════
-elif page == "🔍  Présentation des données":
-    st.markdown("# 🔍 Présentation des données")
-    st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
-
-    with st.spinner("Chargement..."):
-        df = load_data()
-
-    c1, c2, c3 = st.columns(3)
-    c1.markdown(f"<div class='metric'><div class='val'>{df.shape[0]:,}</div><div class='lbl'>Lignes</div></div>", unsafe_allow_html=True)
-    c2.markdown(f"<div class='metric'><div class='val'>{df.shape[1]}</div><div class='lbl'>Colonnes</div></div>", unsafe_allow_html=True)
-    c3.markdown(f"<div class='metric'><div class='val'>{df['code_departement'].nunique()}</div><div class='lbl'>Départements</div></div>", unsafe_allow_html=True)
-
-    st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
-    st.markdown("### Aperçu des données")
-    n = st.slider("Nombre de lignes", 5, 50, 10)
-    st.dataframe(df.head(n), use_container_width=True, hide_index=True)
-
-    st.markdown("### Description des colonnes")
-    col_info = pd.DataFrame({
-        "Colonne": df.columns,
-        "Type": df.dtypes.values.astype(str),
-        "Valeurs manquantes": df.isna().sum().values,
-        "Exemple": [str(df[c].dropna().iloc[0]) if df[c].notna().any() else "—" for c in df.columns]
-    })
-    st.dataframe(col_info, use_container_width=True, hide_index=True)
-
-    st.markdown("### Départements présents dans le jeu de données")
-    st.write(sorted(df['code_departement'].unique().tolist()))
-
-
-# ════════════════════════════════════════════════════════════════════════════════
-# PARTIE 1
-# ════════════════════════════════════════════════════════════════════════════════
-elif page == "📈  Partie 1 — Explorations":
-    st.markdown("# 📈 Partie 1 — Explorations générales")
-    st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
-
-    with st.spinner("Chargement..."):
-        df = load_data()
-
-    # Q1
-    st.markdown("<div class='q-badge'>Q1</div>", unsafe_allow_html=True)
-    st.markdown("### Création des variables `code_commune` et `candidat`")
-    st.markdown("""
-    <div class='card'>
-        <b style='color:#c9a84c;'>code_commune</b> : 2 premiers caractères du département
-        + code commune zero-paddé sur 3 chiffres.<br>
-        <b style='color:#c9a84c;'>candidat</b> : prénom + espace + nom.
-        Les votes non exprimés sont conservés (prenom = NaN).
-    </div>
-    """, unsafe_allow_html=True)
-    st.dataframe(
-        df[['code_departement', 'code_commune', 'libelle_commune', 'candidat', 'voix']].head(10),
-        use_container_width=True, hide_index=True
+    logo_path = Path(__file__).parent / "ressources/logo_ensai.png"
+    if logo_path.exists():
+        st.image(str(logo_path), width=140)
+    st.markdown("<hr>", unsafe_allow_html=True)
+    page = st.radio(
+        "Navigation",
+        [" Vue d'ensemble",
+         " Résultats nationaux",
+         " Analyse territoriale",
+         " Cartographie"],
+        label_visibility="collapsed",
+    )
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown(
+        "<div style='font-size:0.7rem; opacity:0.5; line-height:1.9;'>"
+        "Source : data.gouv.fr<br>Cours Python · Lino Galiana · INSEE"
+        "</div>",
+        unsafe_allow_html=True,
     )
 
-    st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE 1 — VUE D'ENSEMBLE
+# ══════════════════════════════════════════════════════════════════════════════
+if page == " Vue d'ensemble":
+    st.markdown("<div class='page-title'>Élections Présidentielles 2022</div>", unsafe_allow_html=True)
+    st.markdown("<div class='page-sub'>Premier tour · 10 avril 2022</div>", unsafe_allow_html=True)
 
-    # Q2
-    st.markdown("<div class='q-badge'>Q2</div>", unsafe_allow_html=True)
-    st.markdown("### Nombre de candidats")
-    candidats_n = df[df['prenom'].notna()]['candidat'].nunique()
-    st.markdown(f"""
-    <div class='card card-gold' style='font-family:Cormorant Garamond,serif;font-size:1.4rem;'>
-        En 2022, il y avait
-        <span style='color:#c9a84c;font-weight:700;'>{candidats_n}</span>
-        candidats à l'élection présidentielle.
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
-
-    # Q3
-    st.markdown("<div class='q-badge'>Q3</div>", unsafe_allow_html=True)
-    st.markdown("### Scores nationaux")
-    votes_nat, _ = compute_scores(df)
-    votes_nat_display = votes_nat.sort_values('votes_national', ascending=False).copy()
-    votes_nat_display['score_national'] = votes_nat_display['score_national'].round(2)
-    votes_nat_display.columns = ['Candidat', 'Nombre de votes', 'Score (%)']
-    st.dataframe(votes_nat_display, use_container_width=True, hide_index=True)
-
-
-# ════════════════════════════════════════════════════════════════════════════════
-# PARTIE 2
-# ════════════════════════════════════════════════════════════════════════════════
-elif page == "📊  Partie 2 — Comparaisons":
-    st.markdown("# 📊 Partie 2 — Comparaisons départementales")
-    st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
-
-    with st.spinner("Chargement..."):
-        df = load_data()
-    votes_nat, score_dep = compute_scores(df)
-
-    # Q4
-    st.markdown("<div class='q-badge'>Q4</div>", unsafe_allow_html=True)
-    st.markdown("### Scores par département")
-    dept_list = sorted(score_dep['code_departement'].unique())
-    dept_sel = st.selectbox("Département", dept_list,
-                            index=dept_list.index('11') if '11' in dept_list else 0,
-                            key="dept_q4")
-    df4 = score_dep[score_dep['code_departement'] == dept_sel][
-        ['candidat', 'votes_departement', 'score_departement']
-    ].sort_values('votes_departement', ascending=False).reset_index(drop=True)
-    df4['score_departement'] = df4['score_departement'].round(2)
-    df4.columns = ['Candidat', 'Votes', 'Score (%)']
-    st.dataframe(df4, use_container_width=True, hide_index=True)
-
-    st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
-
-    # Q5
-    st.markdown("<div class='q-badge'>Q5</div>", unsafe_allow_html=True)
-    st.markdown("### Comparaison département / national")
-    df5 = score_dep[score_dep['code_departement'] == dept_sel][
-        ['candidat', 'votes_departement', 'score_departement', 'votes_national', 'score_national']
-    ].sort_values('votes_departement', ascending=False).reset_index(drop=True)
-    df5['score_departement'] = df5['score_departement'].round(2)
-    df5['score_national'] = df5['score_national'].round(2)
-    df5.columns = ['Candidat', 'Votes dépt', 'Score dépt (%)', 'Votes national', 'Score national (%)']
-    st.dataframe(df5, use_container_width=True, hide_index=True)
-
-    st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
-
-    # Q6
-    st.markdown("<div class='q-badge'>Q6</div>", unsafe_allow_html=True)
-    st.markdown("### Variable surreprésentation")
-    st.markdown("""
-    <div class='card'>
-        <b style='color:#c9a84c;'>Formule</b> :
-        surreprésentation = (score_département − score_national) / score_national × 100<br>
-        <i style='color:#9a9a9a;'>Exemple : score dépt = 30%, score national = 15% → surreprésentation = 100%</i>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
-
-    # Q7
-    st.markdown("<div class='q-badge'>Q7</div>", unsafe_allow_html=True)
-    st.markdown("### Graphique de surreprésentation par candidat")
-
-    candidats_list = sorted(score_dep['candidat'].unique())
-    cand_sel = st.selectbox("Candidat", candidats_list, key="cand_q7")
-    n_top = st.slider("Nombre de départements", 5, 20, 10)
-
-    df7 = score_dep[score_dep['candidat'] == cand_sel].copy()
-    df7 = df7.reindex(df7['surrepresentation'].abs().sort_values(ascending=False).index).head(n_top)
-
-    import matplotlib.pyplot as plt
-    import matplotlib as mpl
-    mpl.rcParams.update({'text.color': '#e8e4dc', 'axes.labelcolor': '#9a9a9a',
-                         'xtick.color': '#9a9a9a', 'ytick.color': '#e8e4dc'})
-
-    fig, ax = plt.subplots(figsize=(9, max(4, n_top * 0.45)))
-    fig.patch.set_facecolor('#111')
-    ax.set_facecolor('#111')
-    colors = ['#c9a84c' if v >= 0 else '#555555' for v in df7['surrepresentation']]
-    ax.barh(df7['code_departement'], df7['surrepresentation'], color=colors, height=0.6)
-    ax.axvline(0, color='#444', linewidth=1)
-    ax.set_xlabel("Surreprésentation (%)")
-    ax.set_title(f"Top {n_top} surreprésentations — {cand_sel}",
-                 color='#c9a84c', fontsize=13, pad=14,
-                 fontfamily='serif')
-    ax.spines[:].set_color('#2a2a2a')
-    ax.grid(axis='x', color='#2a2a2a', linewidth=0.5)
-    st.pyplot(fig)
-
-
-# ════════════════════════════════════════════════════════════════════════════════
-# PARTIE 3
-# ════════════════════════════════════════════════════════════════════════════════
-elif page == "🗺️  Partie 3 — Cartographie":
-    st.markdown("# 🗺️ Partie 3 — Cartographie")
-    st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
-
-    st.markdown("<div class='q-badge'>Q8</div>", unsafe_allow_html=True)
-    st.markdown("### Carte choroplèthe de la surreprésentation")
-    st.info("⏳ Cette section sera complétée après l'intégration de cartiflette et geopandas.")
-    st.markdown("""
-    <div class='card'>
-        Le code reposera sur :<br>
-        • <b style='color:#c9a84c;'>cartiflette</b> — fond de carte des départements<br>
-        • <b style='color:#c9a84c;'>geopandas</b> — jointure spatiale et cartographie<br>
-        • Un sélecteur de candidat pour afficher la carte correspondante
-    </div>
-    """, unsafe_allow_html=True)
-
-
-# ════════════════════════════════════════════════════════════════════════════════
-# ÉQUIPE
-# ════════════════════════════════════════════════════════════════════════════════
-elif page == "👥  Équipe":
-    st.markdown("# 👥 L'équipe")
-    st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
-
-    if 'photos' not in st.session_state:
-        st.session_state.photos = [None, None, None]
-
-    membres = [
-        {"nom": "Membre 1", "role": "Questions 1–3",
-         "github": "#", "linkedin": "#", "email": "membre1@example.com"},
-        {"nom": "Membre 2", "role": "Questions 4–6",
-         "github": "#", "linkedin": "#", "email": "membre2@example.com"},
-        {"nom": "Membre 3", "role": "Questions 7–8",
-         "github": "#", "linkedin": "#", "email": "membre3@example.com"},
-    ]
-
-    cols = st.columns(3)
-    for i, (col, m) in enumerate(zip(cols, membres)):
+    c1, c2, c3 = st.columns(3)
+    for col, label, val, sub in [
+        (c1, "Candidats", str(nb_candidats), "Au premier tour"),
+        (c2, "Votes exprimés", f"{total_voix/1e6:.1f} M", "Bulletins comptabilisés"),
+        (c3, "Communes", f"{nb_communes:,}", "Bureaux de vote"),
+    ]:
         with col:
-            import base64
-            initiales = "".join([p[0].upper() for p in m['nom'].split()])
-            if st.session_state.photos[i] is not None:
-                b64 = base64.b64encode(st.session_state.photos[i]).decode()
-                avatar = f"<div class='avatar-circle'><img src='data:image/jpeg;base64,{b64}'/></div>"
-            else:
-                avatar = f"<div class='avatar-circle'>{initiales}</div>"
-
             st.markdown(f"""
-            <div class='team-card'>
-                {avatar}
-                <div class='nom'>{m['nom']}</div>
-                <div class='role'>{m['role']}</div>
-                <div class='links'>
-                    <a href='{m['github']}' title='GitHub'><i class='fa fa-github'></i></a>
-                    <a href='{m['linkedin']}' title='LinkedIn'><i class='fa fa-linkedin'></i></a>
-                    <a href='mailto:{m['email']}' title='Email'><i class='fa fa-envelope'></i></a>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            <div class='kpi-card'>
+                <div class='kpi-label'>{label}</div>
+                <div class='kpi-value'>{val}</div>
+                <div class='kpi-sub'>{sub}</div>
+            </div>""", unsafe_allow_html=True)
 
-            uploaded = st.file_uploader(
-                f"📷 Photo de {m['nom']}", type=["jpg", "jpeg", "png"], key=f"photo_{i}"
+    st.markdown("<hr class='divider'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-label'>Podium</div>", unsafe_allow_html=True)
+
+    top3 = votes_national.head(3)
+    cols = st.columns(3)
+    for col, medal, (_, row) in zip(cols, ["🥇", "🥈", "🥉"], top3.iterrows()):
+        with col:
+            st.markdown(f"""
+            <div class='podium-card'>
+                <div class='medal'>{medal}</div>
+                <div class='name'>{row['Candidat']}</div>
+                <div class='score'>{row['score_national']:.1f} %</div>
+                <div class='voix'>{int(row['votes_national']):,} voix</div>
+            </div>""", unsafe_allow_html=True)
+
+    st.markdown("<hr class='divider'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-label'>Résultats complets</div>", unsafe_allow_html=True)
+
+    fig, ax = plt.subplots(figsize=(10, 4.5))
+    style_ax(ax, fig)
+    df_plot = votes_national.sort_values("votes_national")
+    bars = ax.barh(df_plot["Candidat"],
+                   df_plot["score_national"],
+                   color=[COULEURS.get(c, ENSAI_ACCENT) for c in df_plot["Candidat"]],
+                   height=0.6, alpha=0.92)
+    for bar, val in zip(bars, df_plot["score_national"]):
+        ax.text(bar.get_width() + 0.2, bar.get_y() + bar.get_height() / 2,
+                f"{val:.1f}%", va="center", ha="left", color=TEXT_MID, fontsize=8.5)
+    ax.set_xlabel("% des votes exprimés", color=TEXT_LIGHT, fontsize=9)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.yaxis.grid(False)
+    plt.tight_layout()
+    st.pyplot(fig)
+    plt.close()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE 2 — RÉSULTATS NATIONAUX
+# ══════════════════════════════════════════════════════════════════════════════
+elif page == " Résultats nationaux":
+    st.markdown("<div class='page-title'>Résultats Nationaux</div>", unsafe_allow_html=True)
+    st.markdown("<div class='page-sub'>Scores agrégés — Premier tour</div>", unsafe_allow_html=True)
+
+    st.info(f"En 2022, il y avait **{nb_candidats} candidats** à l'élection présidentielle.")
+
+    st.markdown("<hr class='divider'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-label'>Tableau des résultats</div>", unsafe_allow_html=True)
+
+    df_display = pd.DataFrame({
+        "Rang":       range(1, len(votes_national) + 1),
+        "Candidat":   votes_national["Candidat"],
+        "Votes":      votes_national["votes_national"].apply(lambda x: f"{int(x):,}"),
+        "Score (%)":  votes_national["score_national"].apply(lambda x: f"{x:.2f}%"),
+    })
+    st.dataframe(df_display, use_container_width=True, hide_index=True)
+
+    st.markdown("<hr class='divider'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-label'>Scores en barres</div>", unsafe_allow_html=True)
+
+    fig2, ax2 = plt.subplots(figsize=(10, 4.5))
+    style_ax(ax2, fig2)
+    df_plot2 = votes_national.sort_values("score_national")
+    bars2 = ax2.barh(df_plot2["Candidat"],
+                     df_plot2["score_national"],
+                     color=[COULEURS.get(c, ENSAI_ACCENT) for c in df_plot2["Candidat"]],
+                     height=0.6, alpha=0.92)
+    for bar, val in zip(bars2, df_plot2["score_national"]):
+        ax2.text(bar.get_width() + 0.2, bar.get_y() + bar.get_height() / 2,
+                 f"{val:.1f}%", va="center", ha="left", color=TEXT_MID, fontsize=8.5)
+    ax2.set_xlabel("% des votes exprimés", color=TEXT_LIGHT, fontsize=9)
+    ax2.spines["top"].set_visible(False)
+    ax2.spines["right"].set_visible(False)
+    ax2.yaxis.grid(False)
+    plt.tight_layout()
+    st.pyplot(fig2)
+    plt.close()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE 3 — ANALYSE TERRITORIALE
+# ══════════════════════════════════════════════════════════════════════════════
+elif page == " Analyse territoriale":
+    st.markdown("<div class='page-title'>Analyse Territoriale</div>", unsafe_allow_html=True)
+    st.markdown("<div class='page-sub'>Surreprésentation par département (Q6 & Q7)</div>", unsafe_allow_html=True)
+
+    col_ctrl1, col_ctrl2 = st.columns([2, 1])
+    with col_ctrl1:
+        candidat_choisi = st.selectbox("Candidat", options=sorted(score_dep["Candidat"].unique()))
+    with col_ctrl2:
+        nb_dep = st.slider("Nb départements", 5, 20, 10)
+
+    df_c = score_dep[score_dep["Candidat"] == candidat_choisi].copy()
+    df_c["abs_surrep"] = df_c["surrepresentation"].abs()
+    df_top = df_c.nlargest(nb_dep, "abs_surrep").sort_values("surrepresentation")
+
+    st.markdown("<hr class='divider'>", unsafe_allow_html=True)
+    st.markdown(f"<div class='section-label'>Top {nb_dep} surreprésentations — {candidat_choisi}</div>",
+                unsafe_allow_html=True)
+
+    fig3, ax3 = plt.subplots(figsize=(10, max(4, nb_dep * 0.55)))
+    style_ax(ax3, fig3)
+    colors3 = [ENSAI_ACCENT if v >= 0 else ENSAI_MID for v in df_top["surrepresentation"]]
+    ax3.barh(df_top["code_departement"], df_top["surrepresentation"],
+             color=colors3, height=0.65, alpha=0.9)
+    ax3.axvline(0, color=TEXT_MID, linewidth=0.9, linestyle="--")
+    for i, (_, row) in enumerate(df_top.iterrows()):
+        val = row["surrepresentation"]
+        ax3.text(val + (0.5 if val >= 0 else -0.5), i,
+                 f"{val:+.1f}%", va="center",
+                 ha="left" if val >= 0 else "right",
+                 color=TEXT_MID, fontsize=8)
+    ax3.set_xlabel("Surreprésentation (%)", color=TEXT_LIGHT, fontsize=9)
+    ax3.set_ylabel("Département", color=TEXT_LIGHT, fontsize=9)
+    ax3.spines["top"].set_visible(False)
+    ax3.spines["right"].set_visible(False)
+    plt.tight_layout()
+    st.pyplot(fig3)
+    plt.close()
+
+    st.markdown("<hr class='divider'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-label'>Tableau complet</div>", unsafe_allow_html=True)
+
+    df_table = score_dep[score_dep["Candidat"] == candidat_choisi].copy()
+    df_table = df_table.sort_values("score_departement", ascending=False).reset_index(drop=True)
+    st.dataframe(pd.DataFrame({
+        "Département":        df_table["code_departement"],
+        "Votes":              df_table["votes_departement"].apply(lambda x: f"{int(x):,}"),
+        "Score départ. (%)":  df_table["score_departement"].apply(lambda x: f"{x:.2f}%"),
+        "Score national (%)": df_table["score_national"].apply(lambda x: f"{x:.2f}%"),
+        "Surreprés. (%)":     df_table["surrepresentation"].apply(lambda x: f"{x:+.1f}%"),
+    }), use_container_width=True, hide_index=True)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE 4 — CARTOGRAPHIE
+# ══════════════════════════════════════════════════════════════════════════════
+elif page == " Cartographie":
+    st.markdown("<div class='page-title'>Carte Électorale</div>", unsafe_allow_html=True)
+    st.markdown("<div class='page-sub'>Score départemental par candidat (Q8)</div>", unsafe_allow_html=True)
+
+    with st.spinner("Chargement du fond de carte…"):
+        gdf = load_geodata()
+
+    if gdf is None:
+        st.error("Installe `cartiflette` (`pip install cartiflette`) puis relance l'app.")
+        st.stop()
+
+    insee_col = next((c for c in gdf.columns if "dep" in c.lower() or "insee" in c.lower()), None)
+    if insee_col is None:
+        st.error("Colonne département introuvable dans le GeoDataFrame.")
+        st.stop()
+
+    col_ctrl1, col_ctrl2 = st.columns([2, 1])
+    with col_ctrl1:
+        candidat_carte = st.selectbox("Candidat", options=sorted(score_dep["Candidat"].unique()), key="carto")
+    with col_ctrl2:
+        indicateur = st.radio(
+            "Indicateur",
+            ["score_departement", "surrepresentation"],
+            format_func=lambda x: "Score (%)" if x == "score_departement" else "Surreprésentation (%)",
+        )
+
+    df_filtre = score_dep[score_dep["Candidat"] == candidat_carte].copy()
+    df_filtre["code_departement"] = df_filtre["code_departement"].astype(str)
+    carte = gdf.merge(df_filtre, left_on=insee_col, right_on="code_departement", how="left")
+
+    if indicateur == "surrepresentation":
+        cmap = "RdBu_r"
+        lim  = max(carte[indicateur].abs().quantile(0.95), 1)
+        vmin, vmax = -lim, lim
+        label_cb = "% vs. moyenne nationale"
+    else:
+        cmap = "Blues"
+        vmin = carte[indicateur].quantile(0.05)
+        vmax = carte[indicateur].quantile(0.95)
+        label_cb = "Score départemental (%)"
+
+    fig4, ax4 = plt.subplots(figsize=(12, 9))
+    fig4.patch.set_facecolor(WHITE)
+    ax4.set_facecolor(WHITE)
+
+    carte.plot(
+        column=indicateur,
+        cmap=cmap, vmin=vmin, vmax=vmax,
+        legend=True,
+        linewidth=0.6, edgecolor=BORDER,
+        missing_kwds={"color": "#EEEEEE", "label": "Pas de données"},
+        legend_kwds={"shrink": 0.5, "aspect": 20, "label": label_cb},
+        ax=ax4,
+    )
+
+    # ← Styler la colorbar APRÈS le plot, sans passer labelcolor à Colorbar.__init__
+    for child_ax in fig4.axes:
+        if child_ax is not ax4:
+            child_ax.tick_params(labelsize=8, labelcolor=TEXT_MID)
+            child_ax.yaxis.label.set_color(TEXT_MID)
+            child_ax.yaxis.label.set_fontsize(9)
+
+    ax4.set_title(f"{candidat_carte} — {label_cb}", fontsize=13,
+                  color=ENSAI_BLUE, pad=15, fontfamily="serif")
+    ax4.axis("off")
+    plt.tight_layout()
+    st.pyplot(fig4)
+    plt.close()
+
+    # Comparaison multi-candidats
+    st.markdown("<hr class='divider'>", unsafe_allow_html=True)
+    st.markdown("<div class='section-label'>Comparaison multi-candidats</div>", unsafe_allow_html=True)
+
+    candidats_multi = st.multiselect(
+        "Sélectionner 2 à 4 candidats",
+        options=sorted(score_dep["Candidat"].unique()),
+        default=[], max_selections=4,
+    )
+
+    if candidats_multi:
+        n     = len(candidats_multi)
+        nrows = (n + 1) // 2
+        fig5, axes = plt.subplots(nrows, 2, figsize=(14, 6 * nrows))
+        fig5.patch.set_facecolor(WHITE)
+        axes_flat = np.array(axes).flatten()
+
+        for ax_i, cand in zip(axes_flat, candidats_multi):
+            df_c2 = score_dep[score_dep["Candidat"] == cand].copy()
+            df_c2["code_departement"] = df_c2["code_departement"].astype(str)
+            carte2 = gdf.merge(df_c2, left_on=insee_col, right_on="code_departement", how="left")
+            ax_i.set_facecolor(WHITE)
+            lim2 = max(carte2["surrepresentation"].abs().quantile(0.95), 1)
+            carte2.plot(
+                column="surrepresentation", cmap="RdBu_r",
+                vmin=-lim2, vmax=lim2, legend=False,
+                linewidth=0.4, edgecolor=BORDER, ax=ax_i,
             )
-            if uploaded:
-                st.session_state.photos[i] = uploaded.read()
-                st.rerun()
+            ax_i.set_title(cand, color=ENSAI_BLUE, fontsize=10, fontfamily="serif")
+            ax_i.axis("off")
 
-    st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
-    st.markdown("### 📄 README")
-    st.markdown("""
-    <div class='card'>
-        Projet réalisé dans le cadre de l'évaluation intermédiaire du cours
-        <b style='color:#c9a84c;'>Python pour la data science</b> (2026),
-        encadré par Lino Galiana (INSEE).<br><br>
-        <b style='color:#c9a84c;'>Source</b> : Résultats officiels du 1er tour — data.gouv.fr<br>
-        <b style='color:#c9a84c;'>Librairies</b> : pandas · geopandas · great_tables · cartiflette · matplotlib · streamlit
-    </div>
-    """, unsafe_allow_html=True)
+        for ax_extra in axes_flat[n:]:
+            ax_extra.set_visible(False)
+
+        plt.suptitle("Surreprésentation par candidat",
+                     color=ENSAI_BLUE, fontsize=13, fontfamily="serif", y=1.01)
+        plt.tight_layout()
+        st.pyplot(fig5)
+        plt.close()

@@ -33,7 +33,7 @@ def beau_tableau(
         - `"all"` → TOUTES les colonnes en gras
         - `None` → pas de gras
     titre/sous_titre/date : str, optional
-        Header complet si TOUS les 3 fournis (avec icône 📅).
+        Header complet si TOUS les 3 fournis (avec icône calendrier comme dans l'exmple du rendu).
     note : str, optional
         Note en bas (en gras).
     police : str
@@ -65,9 +65,9 @@ def beau_tableau(
     col_entiers = col_entiers or []
     col_pourcentages = col_pourcentages or []
     
-    # GESTION GRAS INTELLIGENTE
+    # GESTION GRAS 
     if col_gras == "all":
-        col_gras = list(df.columns)  # ← TOUTES les colonnes
+        col_gras = list(df.columns)  #  TOUTES les colonnes
     else:
         col_gras = col_gras or []
 
@@ -247,7 +247,7 @@ def merge_carte(df_scores, df_geo, left_id="INSEE_DEP", right_id="code_departeme
 
 
 
-def plot_carte(df_geo, colonne, titre,epais_lim= 0.9, long_legend= 25):
+def plot_carte(df_geo, colonne, titre,epais_lim= 0.8, long_legend= 25):
     """
     Affiche une carte choroplèthe à partir d'un GeoDataFrame.
 
@@ -282,7 +282,7 @@ def plot_carte(df_geo, colonne, titre,epais_lim= 0.9, long_legend= 25):
         },
         legend_kwds={
             "shrink": 0.6,       # taille de la barre 
-            "aspect": long_legend,        # finesse de la barre
+            "aspect": long_legend,        # finesse de la barre de légende
             "label": "Score (%) par rapport à la moyenne nationale" # titre de la légende
         },
         ax=ax
@@ -298,7 +298,7 @@ def plot_carte(df_geo, colonne, titre,epais_lim= 0.9, long_legend= 25):
 
 def carte_par_candidat(df, df_geo, nom_candidat, indicateur="Score (% votes exprimés)",epais_lim=0.8,long_legend= 25):
     """
-    Génère automatiquement la carte des scores départementaux
+    Génère la carte des scores départementaux
     pour un candidat donné.
 
     Parameters
@@ -328,7 +328,7 @@ def carte_par_candidat(df, df_geo, nom_candidat, indicateur="Score (% votes expr
     plot_carte(carte, indicateur, titre,epais_lim, long_legend)
 
 
-def cartes_plusieurs_candidats(df, df_geo, liste_candidats,epais_lim=0.8, long_legend= 25):
+def cartes_plusieurs_candidats(df, df_geo, liste_candidats, indicateur="Score (% votes exprimés)", epais_lim = 0.8, long_legend= 25):
     """
     Génère les cartes pour plusieurs candidats.
 
@@ -350,4 +350,11 @@ def cartes_plusieurs_candidats(df, df_geo, liste_candidats,epais_lim=0.8, long_l
     """
 
     for candidat in liste_candidats:
-        carte_par_candidat(df, df_geo, candidat,epais_lim, long_legend)
+        carte_par_candidat(
+            df=df,
+            df_geo=df_geo,
+            nom_candidat=candidat,
+            indicateur=indicateur,
+            epais_lim=epais_lim,
+            long_legend=long_legend
+        )
