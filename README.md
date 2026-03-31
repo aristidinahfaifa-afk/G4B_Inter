@@ -76,7 +76,7 @@ Python 3.10+ recommandé.
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate        # Linux / macOS
+source .venv/bin/activate        # Linux / macOS / Onyxia 
 # ou
 .venv\Scripts\activate           # Windows
 ```
